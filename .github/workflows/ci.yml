@@ -17,19 +17,19 @@ jobs:
           node-version: 18
           cache: 'npm'
       - name: Install Backend deps
-        working-directory: backend
+        working-directory: Backend
         run: npm ci
       - name: Lint Backend
-        working-directory: backend
+        working-directory: Backend
         run: npm run lint
       - name: Type Check Backend
-        working-directory: backend
+        working-directory: Backend
         run: npx tsc --noEmit
       - name: Test Backend
-        working-directory: backend
+        working-directory: Backend
         run: npm test -- --ci --passWithNoTests
       - name: Build Backend
-        working-directory: backend
+        working-directory: Backend
         run: npm run build
 
   frontend:
@@ -62,7 +62,7 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/google/osv-scanner/main/scripts/install.sh | sudo sh -s -- -b /usr/local/bin
       - name: Scan Backend dependencies
         run: |
-          if [ -f backend/package-lock.json ]; then osv-scanner --lockfile=backend/package-lock.json; fi
+          if [ -f Backend/package-lock.json ]; then osv-scanner --lockfile=Backend/package-lock.json; fi
       - name: Scan Frontend dependencies
         run: |
           if [ -f Frontend/package-lock.json ]; then osv-scanner --lockfile=Frontend/package-lock.json; fi

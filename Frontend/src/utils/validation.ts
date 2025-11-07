@@ -61,13 +61,28 @@ export const ValidationMessages = {
 };
 
 // Input sanitization function
+// Sanitize input by normalizing and escaping, avoiding fragile regex-based removal
 export const sanitizeInput = (input: string): string => {
-  return input
-    .trim()
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, '') // Remove event handlers
-    .replace(/script/gi, ''); // Remove script tags
+  const normalized = input.normalize('NFKC').trim();
+  // Escape HTML special characters to prevent injection
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return normalized.replace(/[&<>"']/g, (m) => map[m]);
+};
+
+// Strict URL validation helper to ensure https scheme only
+export const isSafeUrl = (value: string): boolean => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
 };
 
 // Validate input against pattern
