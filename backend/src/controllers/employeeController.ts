@@ -29,15 +29,20 @@ export const getAllPayments = async (req: IAuthenticatedRequest, res: Response):
       return;
     }
 
-    const page = parseInt(req.query['page'] as string) || 1;
-    const limit = parseInt(req.query['limit'] as string) || 10;
+    const pageRaw = (req.query['page'] as string) || '1';
+    const limitRaw = (req.query['limit'] as string) || '10';
+    const page = Math.max(1, Math.min(1000, parseInt(pageRaw, 10) || 1));
+    const limit = Math.max(1, Math.min(100, parseInt(limitRaw, 10) || 10));
     const skip = (page - 1) * limit;
 
     // Filters
     const status = (req.query['status'] as string | undefined) || undefined;
     const keyword = (req.query['keyword'] as string | undefined) || undefined; // recipient/ref
-    const startDate = req.query['startDate'] ? new Date(String(req.query['startDate'])) : undefined;
-    const endDate = req.query['endDate'] ? new Date(String(req.query['endDate'])) : undefined;
+    const startDateStr = (req.query['startDate'] as string) || '';
+    const endDateStr = (req.query['endDate'] as string) || '';
+    const isValidISODate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
+    const startDate = isValidISODate(startDateStr) ? new Date(startDateStr) : undefined;
+    const endDate = isValidISODate(endDateStr) ? new Date(endDateStr) : undefined;
     const minAmount = req.query['minAmount'] ? Number(req.query['minAmount']) : undefined;
     const maxAmount = req.query['maxAmount'] ? Number(req.query['maxAmount']) : undefined;
     const includeDeleted = String(req.query['includeDeleted'] || 'false') === 'true';
@@ -62,11 +67,13 @@ export const getAllPayments = async (req: IAuthenticatedRequest, res: Response):
 
     let keywordFilter: any = {};
     if (keyword && keyword.trim().length > 0) {
-      const k = keyword.trim();
+      const k = keyword.trim().slice(0, 100);
+      const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const safe = escapeRegex(k);
       keywordFilter = {
         $or: [
-          { recipientName: { $regex: k, $options: 'i' } },
-          { reference: { $regex: k, $options: 'i' } },
+          { recipientName: { $regex: safe, $options: 'i' } },
+          { reference: { $regex: safe, $options: 'i' } },
         ],
       };
     }

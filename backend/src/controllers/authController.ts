@@ -49,9 +49,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Email validation (basic regex - not perfect but works)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Normalize and bound email length to avoid ReDoS on regex
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (normalizedEmail.length === 0 || normalizedEmail.length > 254) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address.',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+    // Email validation (bounded regex)
+    const emailRegex = /^[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]{1,190}\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(normalizedEmail)) {
       res.status(400).json({
         success: false,
         message: 'Please provide a valid email address.',
@@ -70,9 +80,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Phone validation (very basic)
-    const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
-    if (!phoneRegex.test(phone) || phone.length < 10) {
+    // Phone validation with bounded length
+    const normalizedPhone = String(phone).trim();
+    const phoneRegex = /^\+?[\d\s\-\(\)]{7,32}$/;
+    if (!phoneRegex.test(normalizedPhone)) {
       res.status(400).json({
         success: false,
         message: 'Please provide a valid phone number.',
@@ -82,7 +93,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findByEmail(email.toLowerCase());
+    const existingUser = await User.findByEmail(normalizedEmail);
     if (existingUser) {
       res.status(409).json({
         success: false,
@@ -128,9 +139,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const userData = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       password,
-      phone: phone.trim(),
+      phone: normalizedPhone,
       accountNumber: accountNumber!,
       role: 'customer' as const,
       // Email verification disabled: mark users verified by default

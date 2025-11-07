@@ -17,8 +17,10 @@ export const getTransactionHistory = async (req: IAuthenticatedRequest, res: Res
       return;
     }
 
-    const page = parseInt(req.query['page'] as string) || 1;
-    const limit = parseInt(req.query['limit'] as string) || 20;
+    const pageRaw = (req.query['page'] as string) || '1';
+    const limitRaw = (req.query['limit'] as string) || '20';
+    const page = Math.max(1, Math.min(1000, parseInt(pageRaw, 10) || 1));
+    const limit = Math.max(1, Math.min(100, parseInt(limitRaw, 10) || 20));
     const status = req.query['status'] as string;
     const startDate = req.query['startDate'] as string;
     const endDate = req.query['endDate'] as string;
@@ -31,12 +33,14 @@ export const getTransactionHistory = async (req: IAuthenticatedRequest, res: Res
       filter.status = status;
     }
 
-    if (startDate || endDate) {
+    const isValidISODate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
+
+    if ((startDate && isValidISODate(startDate)) || (endDate && isValidISODate(endDate))) {
       filter.createdAt = {};
-      if (startDate) {
+      if (startDate && isValidISODate(startDate)) {
         filter.createdAt.$gte = new Date(startDate);
       }
-      if (endDate) {
+      if (endDate && isValidISODate(endDate)) {
         filter.createdAt.$lte = new Date(endDate);
       }
     }
@@ -192,12 +196,13 @@ export const exportTransactionHistory = async (req: IAuthenticatedRequest, res: 
       filter.status = status;
     }
 
-    if (startDate || endDate) {
+    const isValidISODate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
+    if ((startDate && isValidISODate(startDate)) || (endDate && isValidISODate(endDate))) {
       filter.createdAt = {};
-      if (startDate) {
+      if (startDate && isValidISODate(startDate)) {
         filter.createdAt.$gte = new Date(startDate);
       }
-      if (endDate) {
+      if (endDate && isValidISODate(endDate)) {
         filter.createdAt.$lte = new Date(endDate);
       }
     }

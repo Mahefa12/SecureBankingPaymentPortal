@@ -1,11 +1,12 @@
 import { User } from '../models/User';
 import { getFirestoreDb, initializeFirebase } from '../config/firebase';
 import { logger } from '../utils/logger';
+import crypto from 'crypto';
 
 function generateEmpAccount(): string {
   const prefix = 'EMP';
   const timestamp = Date.now().toString().slice(-6);
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `${prefix}${timestamp}${rand}`;
 }
 
