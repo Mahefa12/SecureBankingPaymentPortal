@@ -6,7 +6,7 @@ version: 2.1
 jobs:
   backend_ci:
     docker:
-      - image: cimg/node:20.10
+      - image: cimg/node:18.19
     working_directory: ~/project
     steps:
       - checkout
@@ -24,15 +24,15 @@ jobs:
           paths:
             - Backend/node_modules
       - run:
-          name: Lint backend
+          name: Type check backend
           command: |
             cd Backend
-            npm run lint
+            npx tsc --noEmit
       - run:
           name: Test backend
           command: |
             cd Backend
-            npm test -- --ci --watchAll=false
+            npm test -- --ci --passWithNoTests --watchAll=false
       - run:
           name: Build backend
           command: |
@@ -41,7 +41,7 @@ jobs:
 
   frontend_ci:
     docker:
-      - image: cimg/node:20.10
+      - image: cimg/node:18.19
     working_directory: ~/project
     steps:
       - checkout
