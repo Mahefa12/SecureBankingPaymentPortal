@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { Types } from 'mongoose';
 import { Payment } from '../models/Payment';
 import { IAuthenticatedRequest } from '../types';
 import { logger } from '../utils/logger';
@@ -165,6 +166,10 @@ export const employeeCancelPayment = async (req: IAuthenticatedRequest, res: Res
 
     const { id } = req.params;
     const { reason, reasonCode } = req.body as { reason?: string; reasonCode?: string };
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.', timestamp: new Date().toISOString() });
+      return;
+    }
     const payment = await Payment.findById(id);
 
     if (!payment) {
@@ -209,6 +214,10 @@ export const employeeValidatePayment = async (req: IAuthenticatedRequest, res: R
     }
 
     const { id } = req.params;
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.', timestamp: new Date().toISOString() });
+      return;
+    }
     const payment = await Payment.findById(id);
 
     if (!payment) {
@@ -254,6 +263,10 @@ export const employeeRejectPayment = async (req: IAuthenticatedRequest, res: Res
       return;
     }
 
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.', timestamp: new Date().toISOString() });
+      return;
+    }
     const payment = await Payment.findById(id);
 
     if (!payment) {
@@ -302,6 +315,10 @@ export const employeeUpdateReason = async (req: IAuthenticatedRequest, res: Resp
       return;
     }
 
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.', timestamp: new Date().toISOString() });
+      return;
+    }
     const payment = await Payment.findById(id);
 
     if (!payment) {
@@ -343,6 +360,10 @@ export const employeeDeletePayment = async (req: IAuthenticatedRequest, res: Res
     }
 
     const { id } = req.params;
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.', timestamp: new Date().toISOString() });
+      return;
+    }
     const payment = await Payment.findById(id);
 
     if (!payment) {
@@ -381,6 +402,10 @@ export const employeeRestorePayment = async (req: IAuthenticatedRequest, res: Re
     }
 
     const { id } = req.params;
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.', timestamp: new Date().toISOString() });
+      return;
+    }
     const payment = await Payment.findById(id);
 
     if (!payment) {
@@ -424,6 +449,7 @@ export const employeeBulkAction = async (req: IAuthenticatedRequest, res: Respon
 
     const results: any[] = [];
     for (const id of ids) {
+      if (!Types.ObjectId.isValid(String(id))) { results.push({ id, ok: false, error: 'invalid_id' }); continue; }
       const payment = await Payment.findById(id);
       if (!payment) { results.push({ id, ok: false, error: 'not_found' }); continue; }
       switch (action) {
@@ -489,6 +515,10 @@ export const employeeAddNote = async (req: IAuthenticatedRequest, res: Response)
       res.status(400).json({ success: false, message: 'Note text is required.' });
       return;
     }
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.' });
+      return;
+    }
     const payment = await Payment.findById(id);
     if (!payment) {
       res.status(404).json({ success: false, message: 'Payment not found.' });
@@ -512,6 +542,10 @@ export const getPaymentAudit = async (req: IAuthenticatedRequest, res: Response)
       return;
     }
     const { id } = req.params;
+    if (!Types.ObjectId.isValid(String(id))) {
+      res.status(400).json({ success: false, message: 'Invalid payment ID.' });
+      return;
+    }
     const payment = await Payment.findById(id, { auditLog: 1 });
     if (!payment) {
       res.status(404).json({ success: false, message: 'Payment not found.' });
@@ -529,6 +563,7 @@ export const employeeAssignPayment = async (req: IAuthenticatedRequest, res: Res
     if (!req.user) { res.status(401).json({ success: false, message: 'Authentication required.' }); return; }
     const { id } = req.params;
     const { assigneeUserId, assigneeName } = req.body as { assigneeUserId?: string; assigneeName?: string };
+    if (!Types.ObjectId.isValid(String(id))) { res.status(400).json({ success: false, message: 'Invalid payment ID.' }); return; }
     const payment = await Payment.findById(id);
     if (!payment) { res.status(404).json({ success: false, message: 'Payment not found.' }); return; }
     if (!assigneeUserId) {
@@ -554,6 +589,7 @@ export const employeeEscalatePayment = async (req: IAuthenticatedRequest, res: R
     if (!req.user) { res.status(401).json({ success: false, message: 'Authentication required.' }); return; }
     const { id } = req.params;
     const { escalated, notes } = req.body as { escalated: boolean; notes?: string };
+    if (!Types.ObjectId.isValid(String(id))) { res.status(400).json({ success: false, message: 'Invalid payment ID.' }); return; }
     const payment = await Payment.findById(id);
     if (!payment) { res.status(404).json({ success: false, message: 'Payment not found.' }); return; }
     payment.escalated = !!escalated;
@@ -610,15 +646,18 @@ export const getQueueHealth = async (_req: IAuthenticatedRequest, res: Response)
 export const exportPayments = async (req: IAuthenticatedRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) { res.status(401).json({ success: false, message: 'Authentication required.' }); return; }
-    // Reuse filters from getAllPayments
+    // Reuse filters from getAllPayments with hardening
     const status = (req.query['status'] as string | undefined) || undefined;
     const keyword = (req.query['keyword'] as string | undefined) || undefined;
-    const startDate = req.query['startDate'] ? new Date(String(req.query['startDate'])) : undefined;
-    const endDate = req.query['endDate'] ? new Date(String(req.query['endDate'])) : undefined;
+    const startDateStr = (req.query['startDate'] as string) || '';
+    const endDateStr = (req.query['endDate'] as string) || '';
+    const isValidISODate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
+    const startDate = isValidISODate(startDateStr) ? new Date(startDateStr) : undefined;
+    const endDate = isValidISODate(endDateStr) ? new Date(endDateStr) : undefined;
     const includeDeleted = String(req.query['includeDeleted'] || 'false') === 'true';
     const query: any = {};
     if (!includeDeleted) query['deletedAt'] = null;
-    if (status) query['status'] = status;
+    if (status && ['pending','processing','completed','failed','cancelled'].includes(status)) query['status'] = status;
     if (startDate || endDate) {
       query['createdAt'] = {};
       if (startDate) query['createdAt']['$gte'] = startDate;
@@ -626,8 +665,10 @@ export const exportPayments = async (req: IAuthenticatedRequest, res: Response):
     }
     let keywordFilter: any = {};
     if (keyword && keyword.trim().length > 0) {
-      const k = keyword.trim();
-      keywordFilter = { $or: [ { recipientName: { $regex: k, $options: 'i' } }, { reference: { $regex: k, $options: 'i' } } ] };
+      const k = keyword.trim().slice(0, 100);
+      const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const safe = escapeRegex(k);
+      keywordFilter = { $or: [ { recipientName: { $regex: safe, $options: 'i' } }, { reference: { $regex: safe, $options: 'i' } } ] };
     }
     const payments = await Payment.find({ $and: [query, keywordFilter] }).sort({ createdAt: -1 });
     const rows = payments.map(p => ({

@@ -139,6 +139,17 @@ export const getTransactionDetails = async (req: IAuthenticatedRequest, res: Res
 
     const { id } = req.params;
 
+    // Validate ObjectId before querying
+    const isValidObjectId = /^[a-fA-F0-9]{24}$/.test(String(id));
+    if (!isValidObjectId) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid transaction ID.',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     const transaction = await Payment.findOne({
       _id: id,
       userId: req.user.userId,
