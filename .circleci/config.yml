@@ -64,7 +64,7 @@ jobs:
             CI: "true"
           command: |
             cd Frontend
-            npm test -- --watchAll=false || echo "Frontend tests failed; continuing"
+            npm test -- --watchAll=false
       - run:
           name: Build frontend
           command: |
