@@ -153,5 +153,5 @@ firebase-service-account.json
 serviceAccountKey.json
 *serviceAccountKey*.json
 
-# Package lock files (choose one)
-package-lock.json
+# Package lock files
+# Commit lockfiles for reproducible installs in CI/CD
